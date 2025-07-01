@@ -1,0 +1,63 @@
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// === AI Chat Assistant ===
+async function askAI() {
+  const input = document.getElementById("chatInput").value;
+  const resBox = document.getElementById("chatResponse");
+  resBox.innerText = "Thinking...";
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer sk-or-1234567890abcdef...",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "mistralai/mixtral-8x7b",
+      messages: [{ role: "user", content: input }]
+    })
+  });
+
+  const data = await res.json();
+  resBox.innerText = data.choices[0]?.message?.content || "Error.";
+}
+
+// === Image Generator ===
+async function generateImage() {
+  const prompt = document.getElementById("imgPrompt").value;
+  const img = document.getElementById("outputImg");
+  img.style.display = "none";
+
+  const res = await fetch("https://api.replicate.com/v1/predictions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Token r8_7PPvwGgPA4lqtfqeMZ9soDIVy0ZIaMB2arTkn",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      version: "a9758cb5d1e0c5e4710e67be76b43595a32dcab564dfb99c0328b50e6482b8a2",
+      input: { prompt }
+    })
+  });
+
+  const data = await res.json();
+  const pollURL = data.urls.get;
+
+  let outputURL = "";
+  while (!outputURL) {
+    const poll = await fetch(pollURL, {
+      headers: { "Authorization": "Token r8_7PPvwGgPA4lqtfqeMZ9soDIVy0ZIaMB2arTkn" }
+    });
+    const result = await poll.json();
+    if (result.status === "succeeded") {
+      outputURL = result.output[0];
+      img.src = outputURL;
+      img.style.display = "block";
+      break;
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
